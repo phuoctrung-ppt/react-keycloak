@@ -1,0 +1,57 @@
+version: '3.7'
+
+#create volumes data pg
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  react-app:
+    image: react-keycloak:latest
+    restart: always
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000      
+    depends_on:
+      - keycloak
+  postgres:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  keycloak:
+    # Keycloak 15.0.2
+    image: quay.io/keycloak/keycloak:latest
+    # build: 
+    #   context: .
+    #   dockerfile: Dockerfile.keycloak
+    volumes:
+      - ./realm-setting.json:/opt/keycloak/data/import/realm-setting.json
+    environment:
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_SCHEMA: public
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+      KC_HOSTNAME: localhost
+      # KEYCLOAK_IMPORT: /opt/keycloak/data/import/realm-setting.json
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
+      JDBC_PARAMS: "ssl=false"
+    entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev --import-realm"]
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
